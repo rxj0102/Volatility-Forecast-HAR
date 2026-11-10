@@ -77,3 +77,17 @@ def test_evaluate_all_sorted_by_mse():
     result = evaluate_all(y, preds)
     mse_values = result["MSE"].tolist()
     assert mse_values == sorted(mse_values)
+
+
+def test_dm_direction_favours_more_accurate_benchmark():
+    """d = L(model 1) - L(model 2): a far more accurate model 1 gives DM < 0 and better == model_1."""
+    from src.evaluation.dm_test import dm_test
+
+    rng = np.random.default_rng(0)
+    y = 0.15 + 0.05 * rng.standard_normal(500) ** 2
+    good = y + 0.001 * rng.standard_normal(500)
+    bad = y + 0.05 * rng.standard_normal(500)
+    res = dm_test(y, good, bad, loss="mse")
+    assert res["DM_HAC"] < 0
+    assert res["better"] == "model_1"
+    assert res["p_hac"] < 0.01
