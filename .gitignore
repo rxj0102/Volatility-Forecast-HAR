@@ -25,3 +25,6 @@ venv/
 
 # OS
 .DS_Store
+
+# open data cache
+data/open_cache/

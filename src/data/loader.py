@@ -1,8 +1,13 @@
-"""Data acquisition and feature engineering for SPY volatility forecasting."""
+"""Data acquisition and feature engineering for SPY volatility forecasting.
+
+Data is open and free: the SPY stand in is the Ken French US market total
+return (Mkt-RF + RF) and VIX is FRED VIXCLS. No Yahoo Finance.
+"""
 
 import numpy as np
 import pandas as pd
-import yfinance as yf
+
+from src.data.opendata import fred, french
 
 ANNUALIZE = np.sqrt(252)
 
@@ -16,23 +21,23 @@ CALM_END = "2025-12-31"
 
 
 def download_spy_vix(start: str = START_DATE, end: str = END_DATE) -> pd.DataFrame:
-    """Download SPY OHLC and VIX data from Yahoo Finance.
+    """Load the SPY stand in and VIX from open data.
+
+    SPY: Ken French US market total return (Mkt-RF + RF) turned into an index.
+    VIX: FRED VIXCLS. Only closes are available (no open, high, low).
 
     Args:
         start: Start date string (YYYY-MM-DD).
         end: End date string (YYYY-MM-DD).
 
     Returns:
-        DataFrame with SPY OHLC columns and rescaled VIX, indexed by date.
+        DataFrame with a Close column and rescaled VIX, indexed by date.
     """
-    spy = yf.download("SPY", start=start, end=end, auto_adjust=True, progress=False)
-    spy.columns = spy.columns.get_level_values(0)
-
-    vix = yf.download("^VIX", start=start, end=end, auto_adjust=True, progress=False)
-    vix.columns = vix.columns.get_level_values(0)
-
-    df = spy.copy()
-    df["VIX"] = vix["Close"] / 100  # rescale to match realized vol units
+    ff = french("F-F_Research_Data_Factors_daily", start=start, end=end)
+    mkt = ff["Mkt-RF"] + ff["RF"]
+    df = pd.DataFrame({"Close": 100 * (1 + mkt).cumprod()})
+    vix = fred("VIXCLS", start, end)["VIXCLS"].dropna()
+    df["VIX"] = (vix / 100).reindex(df.index)  # rescale to match realized vol units
     return df.dropna(subset=["Close", "VIX"])
 
 
@@ -66,10 +71,12 @@ def build_features(df: pd.DataFrame) -> pd.DataFrame:
     out["RV_Daily"] = out["LogReturn"].abs() * ANNUALIZE
     out["RV_5"] = out["LogReturn"].rolling(5).std() * ANNUALIZE  # target variable
 
-    # Garman-Klass OHLC estimator
-    log_hl = np.log(out["High"] / out["Low"])
-    log_co = np.log(out["Close"] / out["Open"])
-    out["GK_Vol"] = np.sqrt(0.5 * log_hl**2 - (2 * np.log(2) - 1) * log_co**2) * ANNUALIZE
+    # Garman-Klass OHLC estimator (only when high/low/open are supplied;
+    # the open data loader provides closes only)
+    if {"High", "Low", "Open"}.issubset(out.columns):
+        log_hl = np.log(out["High"] / out["Low"])
+        log_co = np.log(out["Close"] / out["Open"])
+        out["GK_Vol"] = np.sqrt(0.5 * log_hl**2 - (2 * np.log(2) - 1) * log_co**2) * ANNUALIZE
 
     # Variance Risk Premium (lagged below — VIX is forward-looking)
     out["VRP"] = out["VIX"] - out["RV_5"]
@@ -91,7 +98,8 @@ def build_features(df: pd.DataFrame) -> pd.DataFrame:
         "Return_lag1_sq": ("LogReturn", 1),
     }
     for new_col, (src_col, lag) in lag_map.items():
-        out[new_col] = out[src_col].shift(lag)
+        if src_col in out.columns:
+            out[new_col] = out[src_col].shift(lag)
     out["Return_lag1_sq"] = out["Return_lag1_sq"] ** 2
 
     return out.dropna(subset=["LogReturn", "RV_5", "VIX"])
