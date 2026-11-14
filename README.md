@@ -163,3 +163,11 @@ Extend HAR-RV to include a **jump component** via bipower variation (Andersen, B
 
 ### 3. Cross-Asset Features + Long-Range Attention Model
 Augment the feature set with cross-asset volatility spillovers (VIX term structure slope, realized vol of sector ETFs, IG/HY credit spreads) and benchmark a **temporal self-attention model** (PatchTST or Informer) against HAR. This directly tests whether long-range dependencies beyond HAR's 22-day memory exist and are learnable from market data — the most likely path to beating HAR on equity volatility.
+
+## Data snapshot
+
+`data/open_data_manifest.json` records every open data file behind the results above (SHA-256, rows, first and last date). Ken French and FRED occasionally revise history; after a fresh download, check whether the inputs still match with:
+
+```bash
+python -c "from src.data.opendata import verify_manifest; print(verify_manifest('data/open_data_manifest.json'))"
+```
