@@ -23,8 +23,8 @@ ML_FEATURES = [
     "HAR_D_lag1", "HAR_W_lag1", "HAR_M_lag1",
     "VRP_lag1", "VRP_lag5",
     "AbsReturn_lag1", "Return_lag1_sq",
-    "GK_Vol_lag1",
     "HAR_Pred_IS_lag1",
+    # "GK_Vol_lag1" needs high/low prices, which the open data loader lacks
 ]
 
 

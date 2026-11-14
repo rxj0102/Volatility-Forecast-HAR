@@ -19,7 +19,6 @@ Daily realized volatility (5-day rolling annualized std of log-returns) is forec
 - AR lags of RV (1, 5, 10 days)
 - GARCH conditional volatility lags
 - Variance Risk Premium (`VIX − RV_5`, lagged)
-- Garman-Klass OHLC estimator (8× more efficient than close-to-close)
 
 **Statistical evaluation** goes beyond point metrics:
 - **MSE** (primary) and **QLIKE** loss (Patton 2011 — penalizes vol underestimation)
@@ -29,14 +28,47 @@ Daily realized volatility (5-day rolling annualized std of log-returns) is forec
 
 ---
 
+## Data
+
+Open and free, no API key:
+
+| Series | Source |
+|--------|--------|
+| SPY stand in | Ken French Data Library, US market total return (Mkt-RF + RF), daily |
+| VIX | FRED VIXCLS |
+
+Sample: 2010-01-04 to 2025-12-31 (4,024 days). Train 2010-02-25 to 2022-10-21 (3,188 rows), test 2022-10-24 to 2025-12-29 (798 rows). Only closes are available from these sources, so the Garman-Klass feature from the earlier Yahoo version is not used.
+
+---
+
 ## Key Results
+
+All numbers are copied from the executed notebook `notebooks/01_vol_forecast_har.ipynb` (identical to `05_vol_forecast_har.ipynb`).
+
+**Out-of-sample test (798 days)**
+
+| Model | MSE | QLIKE | R2 |
+|-------|-----|-------|----|
+| HAR-RV | 2.167e-03 | 0.0498 | 0.727 |
+| Lasso / ElasticNet / Stacked | 2.443e-03 | 0.0547 | 0.692 |
+| Equal weight ensemble | 2.514e-03 | 0.0550 | 0.683 |
+| Regime switching | 2.637e-03 | 0.0627 | 0.668 |
+| XGBoost | 2.685e-03 | 0.0575 | 0.662 |
+| Random Forest | 2.856e-03 | 0.0588 | 0.640 |
+| GJR-GARCH-t | 3.596e-03 | 0.0747 | 0.547 |
+| EGARCH-t | 3.868e-03 | 0.0788 | 0.513 |
+| GARCH-t | 4.493e-03 | 0.0836 | 0.434 |
 
 | Finding | Detail |
 |---------|--------|
-| HAR-RV is statistically indistinguishable from the best ML model | DM test p > 0.45 (HAC-corrected) on both MSE and QLIKE |
-| Meta-learner degenerates to a single model | SLSQP assigns near-unity weight to ElasticNet — nonlinear models add zero incremental value |
-| Regime-switching adds no measurable improvement | Equal-weight ensemble performs comparably |
-| HAR generalizes better under COVID crisis | Long-memory structure is more robust to vol-spike regime shifts than tree-based models |
+| HAR-RV has the lowest test MSE and QLIKE | Best ML model (Lasso) has 12.8% higher MSE, but the HAC Diebold-Mariano test cannot separate them (p = 0.200 MSE, 0.102 QLIKE) |
+| HAR significantly beats GARCH family and tree models | HAC DM p < 0.05 against GARCH, EGARCH, GJR, Random Forest and XGBoost on both losses |
+| Meta-learner degenerates to the linear models | SLSQP weights: ElasticNet 0.68, Lasso 0.32, RF and XGB 0.00 |
+| Regime switching does not help | 4.9% higher MSE than the equal weight ensemble |
+| HAR generalizes best under COVID | Retrained on pre-2020 data and tested Feb to Jun 2020: HAR MSE 9.78e-03 vs ElasticNet 1.41e-02 (44% higher) and Random Forest 6.93e-02 |
+| Calm period 2024 to 2025 | Same ranking: HAR R2 0.751 vs Lasso 0.721 |
+
+HAR-RV coefficients (train): beta_D 0.068, beta_W 0.993, beta_M 0.067; train R2 0.852, test R2 0.727.
 
 ---
 
@@ -44,7 +76,7 @@ Daily realized volatility (5-day rolling annualized std of log-returns) is forec
 
 | Component | Library |
 |-----------|---------|
-| Data | `yfinance` |
+| Data | FRED and Ken French Data Library (`src/data/opendata.py`) |
 | GARCH models | `arch` |
 | Statistical tests | `statsmodels`, `scipy` |
 | ML models | `scikit-learn`, `xgboost` |
@@ -59,7 +91,8 @@ Daily realized volatility (5-day rolling annualized std of log-returns) is forec
 Volatility-Forecast-HAR/
 ├── src/
 │   ├── data/
-│   │   └── loader.py           # yfinance download + realized vol feature engineering
+│   │   ├── loader.py           # open data load + realized vol feature engineering
+│   │   └── opendata.py         # FRED and Ken French downloaders (cached)
 │   ├── models/
 │   │   ├── garch.py            # GARCH / EGARCH / GJR-GARCH (Student-t innovations)
 │   │   ├── har.py              # HAR-RV model (Corsi 2009)
@@ -71,7 +104,7 @@ Volatility-Forecast-HAR/
 │       └── plots.py            # Dashboard + individual plot utilities
 ├── notebooks/
 │   └── 01_vol_forecast_har.ipynb   # End-to-end analysis
-├── data/                       # Local data cache (gitignored)
+├── data/                       # Local data cache, data/open_cache (gitignored)
 ├── tests/
 │   ├── test_metrics.py         # Unit tests: loss functions
 │   └── test_har.py             # Unit tests: HAR feature construction + fitting
