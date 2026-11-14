@@ -13,7 +13,7 @@ Daily realized volatility (5-day rolling annualized std of log-returns) is forec
 | Family | Models |
 |--------|--------|
 | Parametric | GARCH(1,1)-t, EGARCH(1,1,1)-t, GJR-GARCH(1,1,1)-t |
-| Econometric benchmark | HAR-RV — daily / weekly / monthly RV lags (Corsi 2009) |
+| Econometric benchmark | HAR-RV, daily / weekly / monthly RV lags (Corsi 2009) |
 | Machine learning | Lasso, ElasticNet, Random Forest, XGBoost |
 | Meta-learners | Constrained stacking (SLSQP), regime-switching ensemble |
 
@@ -23,7 +23,7 @@ Daily realized volatility (5-day rolling annualized std of log-returns) is forec
 - Variance Risk Premium (`VIX − RV_5`, lagged)
 
 **Statistical evaluation** goes beyond point metrics:
-- **MSE** (primary) and **QLIKE** loss (Patton 2011 — penalizes vol underestimation)
+- **MSE** (primary) and **QLIKE** loss (Patton 2011: penalizes vol underestimation)
 - **HAC-corrected Diebold-Mariano tests** (Harvey, Leybourne & Newbold 1997)
 - **Stress tests**: genuine OOS retrain on pre-COVID data, evaluated on 2020 crisis
 - **Calm-period test**: low-vol regime 2024–2025
@@ -162,13 +162,13 @@ dm_results = dm_test_all(y_test, har_pred, ml_preds, loss="mse")
 ## Research-Level Improvements
 
 ### 1. Intraday Realized Variance via Tick Data
-Replace daily close-to-close log-returns with **5-minute intraday realized variance** (Barndorff-Nielsen & Shephard 2002). Intraday RV is a near-perfect proxy for latent quadratic variation and dramatically reduces measurement error in the target variable and all HAR features — likely widening any detectable performance gap between models.
+Replace daily close-to-close log-returns with **5-minute intraday realized variance** (Barndorff-Nielsen & Shephard 2002). Intraday RV is a near-perfect proxy for latent quadratic variation and dramatically reduces measurement error in the target variable and all HAR features: likely widening any detectable performance gap between models.
 
 ### 2. HAR-RV-J: Decompose Continuous vs Jump Variation
 Extend HAR-RV to include a **jump component** via bipower variation (Andersen, Bollerslev & Diebold 2007): `RV = BV + J+`, where `J+ = max(RV - BV, 0)`. The jump and continuous components have distinct autocorrelation structures; HAR-RV-J has shown consistent OOS gains over plain HAR, especially around macro announcements and earnings releases.
 
 ### 3. Cross-Asset Features + Long-Range Attention Model
-Augment the feature set with cross-asset volatility spillovers (VIX term structure slope, realized vol of sector ETFs, IG/HY credit spreads) and benchmark a **temporal self-attention model** (PatchTST or Informer) against HAR. This directly tests whether long-range dependencies beyond HAR's 22-day memory exist and are learnable from market data — the most likely path to beating HAR on equity volatility.
+Augment the feature set with cross-asset volatility spillovers (VIX term structure slope, realized vol of sector ETFs, IG/HY credit spreads) and benchmark a **temporal self-attention model** (PatchTST or Informer) against HAR. This directly tests whether long-range dependencies beyond HAR's 22-day memory exist and are learnable from market data: the most likely path to beating HAR on equity volatility.
 
 ## Data snapshot
 
