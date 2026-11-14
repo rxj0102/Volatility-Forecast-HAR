@@ -1,5 +1,7 @@
 # HAR-RV vs ML: SPY Volatility Forecasting
 
+[![CI](https://github.com/rxj0102/Volatility-Forecast-HAR/actions/workflows/ci.yml/badge.svg)](https://github.com/rxj0102/Volatility-Forecast-HAR/actions/workflows/ci.yml)
+
 Can machine learning models statistically outperform HAR-RV (Corsi 2009) for next-day SPY realized volatility?
 
 ---
