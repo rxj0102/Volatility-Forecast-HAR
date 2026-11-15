@@ -1,14 +1,13 @@
-# make reproduce   rerun the full analysis, write results/ and re-render the README tables
-# make check       verify README Key Results match results/ (fast, used in CI)
-# make test        run the unit tests
+# make reproduce   rerun every horizon (about 2 minutes), write results/ and re-render the README
+# make check       verify the README matches results/metrics.json (fast, used in CI)
+# make test        run the tests
 .PHONY: setup reproduce render check test
 
 setup:
 	uv sync
 
 reproduce:
-	uv run jupyter nbconvert --to notebook --execute --inplace \
-		--ExecutePreprocessor.timeout=3600 notebooks/01_vol_forecast_har.ipynb
+	uv run python scripts/reproduce.py
 	uv run python scripts/render_readme.py
 
 render:
