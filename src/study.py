@@ -35,7 +35,8 @@ from sklearn.preprocessing import StandardScaler
 SNAPSHOT = Path(__file__).resolve().parents[1] / "data" / "snapshot" / "market_daily.csv"
 HAR = ["rv_d", "rv_w", "rv_m"]
 HARX = [*HAR, "vix2", "neg"]
-MODELS = ["No change", "EWMA", "GARCH", "GJR-GARCH", "VIX", "HAR", "HAR-X", "Lasso",
+SHAR = ["neg", "pos", "rv_w", "rv_m"]   # Patton and Sheppard (2015): yesterday split by sign
+MODELS = ["No change", "EWMA", "GARCH", "GJR-GARCH", "VIX", "HAR", "SHAR", "HAR-X", "Lasso",
           "Random forest", "Gradient boosting", "HAR-X + boosting"]
 ML_MODELS = ["Lasso", "Random forest", "Gradient boosting"]
 SEED = 42
@@ -67,6 +68,7 @@ def features(df: pd.DataFrame) -> pd.DataFrame:
     f["rv_m"] = r2.rolling(22).mean()
     f["vix2"] = (df["vix"] / 100.0) ** 2 / 252.0
     f["neg"] = r2.where(df["r"] < 0, 0.0)
+    f["pos"] = r2 - f["neg"]
     return f
 
 
@@ -149,6 +151,7 @@ def walk_forward(df: pd.DataFrame, h: int, cfg: Config) -> pd.DataFrame:
             p[name] = garch_path(r - mean_r, params, h)[test]
         p["VIX"] = LinearRegression().fit(Xtr[["vix2"]], ytr).predict(Xte[["vix2"]])
         p["HAR"] = LinearRegression().fit(Xtr[HAR], ytr).predict(Xte[HAR])
+        p["SHAR"] = LinearRegression().fit(Xtr[SHAR], ytr).predict(Xte[SHAR])
         p["HAR-X"] = LinearRegression().fit(Xtr[HARX], ytr).predict(Xte[HARX])
         lasso = make_pipeline(StandardScaler(), LassoCV(cv=TimeSeriesSplit(5), random_state=SEED))
         p["Lasso"] = lasso.fit(Xtr[HARX], ytr).predict(Xte[HARX])

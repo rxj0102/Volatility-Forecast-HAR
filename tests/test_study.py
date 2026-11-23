@@ -89,3 +89,14 @@ def test_floor_and_diebold_mariano():
     assert worse["t"] > 5 and worse["p_two_sided"] < 0.001 and worse["lags"] >= 4
     d = rng.normal(0.1, 1, 500)
     assert study.newey_west_t(d, 0) == pytest.approx(d.mean() / (d.std() / np.sqrt(500)))
+
+
+def test_shar_features_split_yesterday_by_sign():
+    import numpy as np
+    import pandas as pd
+    from src import study
+    df = pd.DataFrame({"r": [0.01, -0.02, 0.03, -0.01] * 10, "vix": 20.0},
+                      index=pd.bdate_range("2020-01-01", periods=40))
+    f = study.features(df)
+    assert np.allclose(f["neg"] + f["pos"], f["rv_d"])
+    assert (f.loc[df["r"] > 0, "neg"] == 0).all() and (f.loc[df["r"] < 0, "pos"] == 0).all()

@@ -91,6 +91,8 @@ def main() -> None:
             # added after the first run showed GJR-GARCH, not HAR, was the model to beat
             "ml_vs_gjr_qlike": {m: {"t": float(g.loc[m, "dm_t_qlike"]), "p": float(g.loc[m, "dm_p_qlike"])}
                                 for m in study.ML_MODELS},
+            # added with SHAR after a literature review: does HAR with the sign split catch GJR-GARCH?
+            "shar_vs_gjr_qlike": {"t": float(g.loc["SHAR", "dm_t_qlike"]), "p": float(g.loc["SHAR", "dm_p_qlike"])},
             "best_qlike": str(t["qlike"].idxmin()), "best_mse": str(t["mse"].idxmin()),
             "target_mean_annual_vol": float(np.sqrt(y.mean() * 252)),
         }
