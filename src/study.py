@@ -103,7 +103,7 @@ def garch_path(r: np.ndarray, params: dict, h: int) -> np.ndarray:
     lr = w / max(1.0 - pers, 1e-6)
     n = len(r)
     nxt = np.empty(n)
-    s2 = np.var(r)
+    s2 = np.var(r[:250])  # start from the first year only; never from later data
     for t in range(n):
         s2 = w + (a + g * (r[t] < 0)) * r[t] ** 2 + b * s2
         nxt[t] = s2
